@@ -10,5 +10,14 @@ fn main() {
     let results = posts
         .filter(published.eq(true))
         .limit(5)
-        .load::<Post>(connection);
+        .load::<Post>(connection)
+        .expect("Cannot load posts");
+
+    println!("Displaying {} posts", results.len());
+
+    for post in results {
+        println!("{}", post.title);
+        println!("---------------\n");
+        println!("{}", post.body)
+    }
 }
