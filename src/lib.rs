@@ -21,7 +21,7 @@ pub fn create_post(conn: &mut PgConnection, title: &str, body: &str) -> Post {
 
     diesel::insert_into(posts::table)
         .values(&new_post)
-        .get_result(conn)
+        .get_result::<Post>(conn)
         .expect("Error uploading posts")
 }
 
