@@ -16,7 +16,5 @@ pub fn establish_connection() -> PgConnection {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn it_works() {
-        println!("cocksucker");
-    }
+    fn it_works() {}
 }
