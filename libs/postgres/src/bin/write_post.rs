@@ -1,5 +1,6 @@
+use diesel::{PgConnection, RunQueryDsl};
+use postgres::*;
 use std::io::{stdin, Read};
-use PROJECT_Y_SERVER::*;
 
 fn main() {
     let connection = &mut establish_connection();
@@ -20,6 +21,18 @@ fn main() {
 
     let post = create_post(connection, title, &body);
     println!("\n Post created and saved with id: {}", post.id)
+}
+
+use self::models::*;
+pub fn create_post(conn: &mut PgConnection, title: &str, body: &str) -> Post {
+    use crate::schema::posts;
+
+    let new_post = NewPost { title, body };
+
+    diesel::insert_into(posts::table)
+        .values(&new_post)
+        .get_result::<Post>(conn)
+        .expect("Error uploading posts")
 }
 
 #[cfg(not(windows))]

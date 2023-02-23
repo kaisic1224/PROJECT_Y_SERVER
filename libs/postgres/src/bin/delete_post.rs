@@ -1,6 +1,6 @@
 use diesel::prelude::*;
+use postgres::*;
 use std::env::args;
-use PROJECT_Y_SERVER::*;
 
 fn main() {
     use self::schema::posts::dsl::*;

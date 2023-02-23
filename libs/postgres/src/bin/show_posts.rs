@@ -1,6 +1,6 @@
 use self::models::*;
 use diesel::prelude::*;
-use PROJECT_Y_SERVER::*;
+use postgres::*;
 
 fn main() {
     use self::schema::posts::dsl::*;
