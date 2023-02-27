@@ -1,4 +1,4 @@
-use diesel::prelude::*;
+use diesel::{data_types::PgTimestamp, prelude::*};
 
 #[derive(Queryable)]
 pub struct Post {
@@ -8,8 +8,46 @@ pub struct Post {
     pub published: bool,
 }
 
-use crate::schema::posts;
+#[derive(Queryable)]
+pub struct Account {
+    pub user_id: i32,
+    pub email: String,
+    pub account_username: String,
+    pub account_password: String,
+    pub date_created: PgTimestamp,
+}
 
+#[derive(Queryable)]
+pub struct FriendRequest {
+    pub request_id: i32,
+    pub user1_id: i32,
+    pub user2_id: i32,
+}
+
+#[derive(Queryable)]
+pub struct Friendship {
+    pub user1_id: i32,
+    pub user2_id: i32,
+    pub date_created: PgTimestamp,
+}
+
+#[derive(Queryable)]
+pub struct Messages {
+    pub message_id: i32,
+    pub s3_path: String,
+    pub chat_id: i32,
+    pub user_id: i32,
+    pub date_created: PgTimestamp,
+}
+
+#[derive(Queryable)]
+pub struct Chat {
+    pub chat_id: i32,
+    pub user1_id: i32,
+    pub user2_id: i32,
+}
+
+use crate::schema::posts;
 #[derive(Insertable)]
 #[diesel(table_name = posts)]
 pub struct NewPost<'a> {
