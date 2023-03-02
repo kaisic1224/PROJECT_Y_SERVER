@@ -1,7 +1,10 @@
+extern crate redis;
+use dotenvy::dotenv;
+use redis::Connection;
+use std::env;
+
 // use axum::response::Redirect;
-// use dotenvy::dotenv;
 // use serde::{Deserialize, Serialize};
-// use std::env;
 
 // #[derive(Debug, Deserialize, Serialize)]
 // pub struct QueryString {
@@ -33,8 +36,21 @@
 #[derive(Debug)]
 pub struct User {}
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {}
+pub async fn get_redis() -> Connection {
+    dotenv().expect("No env file found");
+    let redis_url = env::var("REDIS_URL").expect("Invalid redis url");
+    let client = redis::Client::open(redis_url).expect("Error connecting to Redis url");
+    let mut con = client
+        .get_connection()
+        .unwrap_or_else(|_| panic!("Error connecting to Redis server"));
+    return con;
+}
+
+pub fn test_redis() -> redis::RedisResult<()> {
+    let mut con = get_redis();
+    /* do something here */
+
+    // println!("{}", fruit);
+
+    Ok(())
 }
