@@ -2,7 +2,7 @@ pub mod models;
 pub mod schema;
 
 use diesel::pg::PgConnection;
-use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::Connection;
 use dotenvy::dotenv;
 use std::env;
@@ -12,4 +12,16 @@ pub fn establish_connection() -> PgConnection {
 
     let db_url = env::var("DATABASE_URL").expect("Database URL not found in env file");
     PgConnection::establish(&db_url).unwrap_or_else(|_| panic!("Error connecting to {}", &db_url))
+}
+
+pub fn create_connection_pool() -> Pool<ConnectionManager<DbConnection>> {
+    dotenv().expect("no env file found");
+
+    let db_url = env::var("DATABASE_URL").expect("Database url not specified in env");
+
+    let manager = ConnectionManager::<DbConnection>::new(db_url);
+    Pool::builder()
+        .test_on_check_out(true)
+        .build(manager)
+        .expect("Can not build connection")
 }
