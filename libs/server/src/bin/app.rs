@@ -1,23 +1,25 @@
 use aws_config::load_from_env;
 use aws_sdk_s3::Client;
-use axum::{extract::Query, routing::get, Router, Server};
-use r2d2::Pool;
-use r2d2_redis::redis::Commands;
-use r2d2_redis::{r2d2, RedisConnectionManager};
-use serde::Deserialize;
-use std::net::SocketAddr;
-use std::{env, thread};
+use axum::{extract::Query, http::StatusCode, routing::get, Json, Router, Server};
+use jsonwebtoken::{encode, EncodingKey, Header};
+use postgres;
+use serde::{Deserialize, Serialize};
+use server;
+use std::{fs, net::SocketAddr};
 
 #[tokio::main]
 async fn main() {
     let config = load_from_env().await;
     let _client = Client::new(&config);
 
-    let pool = create_connection_pool();
+    let redis_pool = server::create_connection_pool();
+    let pg_pool = postgres::create_connection_pool();
     let app = Router::new()
         .route("/", get(|| async { "Hello world" }))
         .route("/redis", get(save_to_redis))
-        .with_state(pool);
+        .route("/login", get(login))
+        .with_state(redis_pool)
+        .with_state(pg_pool);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     Server::bind(&addr)
@@ -32,20 +34,31 @@ async fn shutdown_signal() {
     println!("Shutting server down");
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize)]
 struct AuthToken {
-    id: i32,
-    signature: String,
+    token: String,
+    expires_in: i32,
 }
 
-async fn save_to_redis(params: Query<AuthToken>) {
-    let auth_token = params.0;
+#[derive(Deserialize, Serialize)]
+pub struct User {
+    pub email: String,
+    pub pw: String,
 }
 
-pub fn create_connection_pool() -> Pool<RedisConnectionManager> {
-    dotenvy::dotenv().ok();
-    let redis_url = env::var("REDIS_URL").expect("Redis URL not found");
-    let manager = RedisConnectionManager::new(redis_url).unwrap();
-    let pool = r2d2::Pool::builder().build(manager).unwrap();
-    pool
+async fn save_to_redis(Query(params): Query<User>) -> Json<AuthToken> {
+    // read private key
+    // public key is used for verifying the private key, rsa is based on input from private key and outputted public key
+    // so create the jwt/initially sign it with the private key
+    // then we look up to verify it hasnt changed with the public key
+    let key = fs::read("./private-key.pem").unwrap();
+    let token = encode(&Header::default(), &params, &EncodingKey::from_secret(&key)).unwrap();
+    Json(AuthToken {
+        expires_in: 3600,
+        token,
+    })
+}
+
+async fn login() -> Result<String, StatusCode> {
+    Ok("suck my cock idot".to_string())
 }

@@ -19,3 +19,4 @@ chrono = "0.4.23"
 redis = { version = "0.22.3", features = ["r2d2"] }
 r2d2 = "0.8.10"
 r2d2_redis = "0.14.0"
+postgres = { path = "../postgres" }

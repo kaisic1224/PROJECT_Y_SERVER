@@ -2,3 +2,5 @@
 /Cargo.lock
 .env
 dump.rdb
+private-key.pem
+public-key.pem

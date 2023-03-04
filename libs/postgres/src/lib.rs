@@ -14,12 +14,12 @@ pub fn establish_connection() -> PgConnection {
     PgConnection::establish(&db_url).unwrap_or_else(|_| panic!("Error connecting to {}", &db_url))
 }
 
-pub fn create_connection_pool() -> Pool<ConnectionManager<DbConnection>> {
+pub fn create_connection_pool() -> Pool<ConnectionManager<PgConnection>> {
     dotenv().expect("no env file found");
 
     let db_url = env::var("DATABASE_URL").expect("Database url not specified in env");
 
-    let manager = ConnectionManager::<DbConnection>::new(db_url);
+    let manager = ConnectionManager::<PgConnection>::new(db_url);
     Pool::builder()
         .test_on_check_out(true)
         .build(manager)
