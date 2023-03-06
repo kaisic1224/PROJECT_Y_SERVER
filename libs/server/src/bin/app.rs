@@ -19,7 +19,7 @@ extern crate lazy_static;
 lazy_static! {
     static ref PRIVATE_KEY: Vec<u8> = fs::read("./jwt_private_key.pem").unwrap();
     static ref PUBLIC_KEY: Vec<u8> = fs::read("./jwt_public_key.pem").unwrap();
-    static ref iss: HashSet<String> =
+    static ref ISS: HashSet<String> =
         HashSet::from_iter(vec!["http://localhost:3000".to_string()].iter().cloned());
 }
 
@@ -40,11 +40,17 @@ async fn main() {
         });
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    Server::bind(&addr)
+
+    match Server::bind(&addr)
         .serve(app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
-        .unwrap();
+    {
+        Ok(c) => c,
+        Err(err) => {
+            panic!("{}", err);
+        }
+    };
 }
 
 async fn shutdown_signal() {
@@ -95,8 +101,10 @@ async fn authorize(
     // so create the jwt/initially sign it with the private key
     // then we look up to verify it hasnt changed with the public key
     // symetric encryption - uses same key for encrypt and decrypt
-    let pg_pool = state.pg_pool.clone();
-    let redis_pool = state.redis_pool.clone();
+    // yo refactor the pg account method creation this sucks LOL
+    let state = state.clone();
+    let pg_pool = state.pg_pool;
+    let redis_pool = state.redis_pool;
     let other_params = params.clone();
     let t = thread::spawn(move || {
         let conn = &mut pg_pool.get().unwrap();
@@ -107,7 +115,6 @@ async fn authorize(
             other_params.pw.as_str(),
         );
     });
-
     t.join().unwrap();
 
     let claims = Claims {
@@ -116,7 +123,7 @@ async fn authorize(
         sub: params.username.to_owned(), //change to db id later or uuid
         exp: (Utc::now().timestamp() + 1 * 60 * 60).try_into().unwrap(),
         iat: Utc::now().timestamp().try_into().unwrap(),
-        iss: iss.clone(),
+        iss: ISS.clone(),
     };
 
     let token = encode(
@@ -128,6 +135,7 @@ async fn authorize(
     Json(AuthToken { token })
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct ErrorMessage {
     status: String,
     message: String,
@@ -140,7 +148,7 @@ async fn token(Query(token): Query<AuthToken>) -> (StatusCode, Json<UserResponse
     let mut validation = Validation::new(jsonwebtoken::Algorithm::RS512);
     // make new deserialize struct to retain token payload
     validation.leeway = 5;
-    validation.iss = Some(iss.clone());
+    validation.iss = Some(ISS.clone());
     // validate pkce code
     let (code, token_data) = match decode::<UserResponse>(
         &token.token,
