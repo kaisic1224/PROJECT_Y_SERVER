@@ -2,3 +2,6 @@
 members = [
     "libs/*"
 ]
+
+[profile.dev]
+opt-level = 1

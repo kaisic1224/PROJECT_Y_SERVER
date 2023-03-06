@@ -54,3 +54,12 @@ pub struct NewPost<'a> {
     pub title: &'a str,
     pub body: &'a str,
 }
+
+use crate::schema::account;
+#[derive(Insertable)]
+#[diesel(table_name = account)]
+pub struct NewAccount<'a> {
+    pub email: &'a str,
+    pub account_username: &'a str,
+    pub account_password: &'a str,
+}
