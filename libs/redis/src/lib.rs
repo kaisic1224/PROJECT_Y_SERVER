@@ -1,4 +1,4 @@
-extern crate redis;
+extern crate r2d2_redis;
 use dotenvy::dotenv;
 use r2d2::Pool;
 use r2d2_redis::{r2d2, RedisConnectionManager};

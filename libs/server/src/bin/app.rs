@@ -40,7 +40,6 @@ async fn main() {
         });
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-
     match Server::bind(&addr)
         .serve(app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
@@ -104,6 +103,11 @@ async fn authorize(
     // yo refactor the pg account method creation this sucks LOL
     let state = state.clone();
     let pg_pool = state.pg_pool;
+    // use redis to save the refresh token for 7 days TTL
+    // on visit to /refresh_token
+    // check if requested token exists in redis
+    // generate new access refresh token pair
+    // (rotating tokens) then invalidate the old one
     let redis_pool = state.redis_pool;
     let other_params = params.clone();
     let t = thread::spawn(move || {
@@ -136,9 +140,13 @@ async fn authorize(
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct ErrorMessage {
+pub struct AuthError {
     status: String,
     message: String,
+}
+
+impl UserResponse {
+    fn err() {}
 }
 
 // add other type here, will either be a new token, or existing session
@@ -147,7 +155,6 @@ async fn token(Query(token): Query<AuthToken>) -> (StatusCode, Json<UserResponse
     // turbofish into the struct we want to deserialzie it into
     let mut validation = Validation::new(jsonwebtoken::Algorithm::RS512);
     // make new deserialize struct to retain token payload
-    validation.leeway = 5;
     validation.iss = Some(ISS.clone());
     // validate pkce code
     let (code, token_data) = match decode::<UserResponse>(
@@ -158,7 +165,7 @@ async fn token(Query(token): Query<AuthToken>) -> (StatusCode, Json<UserResponse
         Ok(c) => (StatusCode::OK, c),
         Err(err) => match *err.kind() {
             // check for auth and expiry here
-            ErrorKind::InvalidToken => todo!(), // Example on how to handle a specific error
+            ErrorKind::InvalidToken => todo!(), //return (StatusCode::FORBIDDEN), // Example on how to handle a specific error
             ErrorKind::InvalidIssuer => todo!(), // Example on how to handle a specific error,
             ErrorKind::ExpiredSignature => todo!(),
             _ => todo!(),
@@ -168,3 +175,5 @@ async fn token(Query(token): Query<AuthToken>) -> (StatusCode, Json<UserResponse
 
     (code, Json(token_data.claims))
 }
+
+async fn save_to_bucket() {}
