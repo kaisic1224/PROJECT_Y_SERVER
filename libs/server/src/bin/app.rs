@@ -114,9 +114,8 @@ async fn authorize(
     let other_params = params.clone();
     let mut access_token: [u8; 0] = [];
     let refresh_token = "sdfsdf";
-
-    let x = ring::rand::SystemRandom::new();
-    x.fill(&mut access_token).unwrap();
+    let sr = ring::rand::SystemRandom::new();
+    sr.fill(&mut access_token).unwrap();
     let t = thread::spawn(move || {
         let conn = &mut pg_pool.get().unwrap();
         let redis_conn = &mut redis_pool.get().unwrap();
@@ -127,7 +126,11 @@ async fn authorize(
             other_params.pw.as_str(),
         );
 
-        let res = match save_refresh_tokens(redis_conn, refresh_token, access_token) {
+        let res = match save_refresh_tokens(
+            redis_conn,
+            refresh_token,
+            std::str::from_utf8(&access_token).unwrap(),
+        ) {
             Ok(c) => c,
             Err(err) => "Error setting tokens".to_string(),
         };
