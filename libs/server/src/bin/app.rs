@@ -11,6 +11,8 @@ use jsonwebtoken::{
     decode, encode, errors::ErrorKind, DecodingKey, EncodingKey, Header, Validation,
 };
 use postgres::create_acc;
+use redis::save_refresh_tokens;
+use ring::rand::SecureRandom;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fs, net::SocketAddr, thread};
 
@@ -110,14 +112,25 @@ async fn authorize(
     // (rotating tokens) then invalidate the old one
     let redis_pool = state.redis_pool;
     let other_params = params.clone();
+    let mut access_token: [u8; 0] = [];
+    let refresh_token = "sdfsdf";
+
+    let x = ring::rand::SystemRandom::new();
+    x.fill(&mut access_token).unwrap();
     let t = thread::spawn(move || {
         let conn = &mut pg_pool.get().unwrap();
-        let acc = create_acc(
+        let redis_conn = &mut redis_pool.get().unwrap();
+        let _acc = create_acc(
             conn,
             other_params.email.as_str(),
             other_params.username.as_str(),
             other_params.pw.as_str(),
         );
+
+        let res = match save_refresh_tokens(redis_conn, refresh_token, access_token) {
+            Ok(c) => c,
+            Err(err) => "Error setting tokens".to_string(),
+        };
     });
     t.join().unwrap();
 
@@ -139,7 +152,7 @@ async fn authorize(
     Json(AuthToken { token })
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Serialize)]
 pub struct AuthError {
     status: String,
     message: String,

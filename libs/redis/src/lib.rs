@@ -1,12 +1,15 @@
 extern crate r2d2_redis;
 use dotenvy::dotenv;
-use r2d2::Pool;
-use r2d2_redis::{r2d2, RedisConnectionManager};
-use std::env;
+use r2d2_redis::{
+    r2d2,
+    redis::{self, RedisResult},
+    RedisConnectionManager,
+};
+use std::{env, ops::DerefMut};
 
-pub type RedisPool = Pool<RedisConnectionManager>;
+pub type RedisPool = r2d2::Pool<RedisConnectionManager>;
 
-pub fn create_connection_pool() -> Pool<RedisConnectionManager> {
+pub fn create_connection_pool() -> r2d2::Pool<RedisConnectionManager> {
     dotenv().ok();
     let redis_url = env::var("REDIS_URL").expect("Redis URL not found");
     let manager = RedisConnectionManager::new(redis_url).unwrap();
@@ -27,4 +30,21 @@ pub fn create_connection_pool() -> Pool<RedisConnectionManager> {
     // for h in handles {
     //     h.join().unwrap();
     // }
+}
+
+pub fn save_refresh_tokens(
+    conn: &mut r2d2::PooledConnection<RedisConnectionManager>,
+    refresh_token: &str,
+    access_token: &str,
+) -> RedisResult<String> {
+    redis::cmd("SET")
+        .arg(&[
+            refresh_token,
+            access_token,
+            "NX",
+            "GET",
+            "EX",
+            (7 * 24 * 60 * 60).to_string().as_str(),
+        ])
+        .query::<String>(conn.deref_mut())
 }
