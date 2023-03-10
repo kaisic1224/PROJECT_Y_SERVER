@@ -74,7 +74,7 @@ pub struct UserRequest {
     pub email: String,
     pub pw: String,
     pub username: String,
-    pub code_verifier: String,
+    // pub code_verifier: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -115,6 +115,7 @@ async fn authorize(
     let mut access_token: [u8; 0] = [];
     let refresh_token = "sdfsdf";
     let sr = ring::rand::SystemRandom::new();
+    print!("{}", std::str::from_utf8(&access_token).unwrap());
     sr.fill(&mut access_token).unwrap();
     let t = thread::spawn(move || {
         let conn = &mut pg_pool.get().unwrap();
@@ -128,11 +129,14 @@ async fn authorize(
 
         let res = match save_refresh_tokens(
             redis_conn,
-            refresh_token,
+            &refresh_token,
             std::str::from_utf8(&access_token).unwrap(),
+            &(Utc::now().timestamp() + 7 * 24 * 60 * 60)
+                .try_into()
+                .unwrap(),
         ) {
             Ok(c) => c,
-            Err(err) => "Error setting tokens".to_string(),
+            Err(err) => format!("Error setting tokens, {}", err),
         };
     });
     t.join().unwrap();
@@ -153,16 +157,6 @@ async fn authorize(
     )
     .unwrap();
     Json(AuthToken { token })
-}
-
-#[derive(Serialize)]
-pub struct AuthError {
-    status: String,
-    message: String,
-}
-
-impl UserResponse {
-    fn err() {}
 }
 
 // add other type here, will either be a new token, or existing session

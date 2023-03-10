@@ -36,6 +36,7 @@ pub fn save_refresh_tokens(
     conn: &mut r2d2::PooledConnection<RedisConnectionManager>,
     refresh_token: &str,
     access_token: &str,
+    ex: &usize,
 ) -> RedisResult<String> {
     redis::cmd("SET")
         .arg(&[
@@ -44,7 +45,7 @@ pub fn save_refresh_tokens(
             "NX",
             "GET",
             "EX",
-            (7 * 24 * 60 * 60).to_string().as_str(),
+            &ex.to_string(),
         ])
         .query::<String>(conn.deref_mut())
 }
